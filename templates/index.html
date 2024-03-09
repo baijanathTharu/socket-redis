@@ -64,6 +64,30 @@
     <script src="https://cdn.socket.io/4.7.4/socket.io.min.js"></script>
     <script>
       const socket = io();
+
+      const form = document.querySelector("#form");
+
+      form.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        if (!input.value) return;
+        try {
+          const response = await socket
+            .timeout(5000)
+            .emitWithAck("chat_message", { message: input.value });
+          console.log("response", response);
+
+          input.value = "";
+          return false;
+        } catch (e) {}
+      });
+
+      socket.on("chat_message", (msg, cb) => {
+        const item = document.createElement("li");
+        item.textContent = msg.message;
+        messages.appendChild(item);
+        window.scrollTo(0, document.body.scrollHeight);
+        cb({ status: "ok", message: "message received" });
+      });
     </script>
   </body>
 </html>

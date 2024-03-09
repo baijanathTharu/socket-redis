@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Room</title>
+  </head>
+  <body>
+    <h1>Room</h1>
+
+    <p>Room ID: <span id="room_detail"></span></p>
+
+    <h2>Join Room</h2>
+    <form id="form" action="">
+      <label for="room_id">Room</label>
+      <select name="room_id" id="room_id">
+        <option value="1">Room 1</option>
+        <option value="2">Room 2</option>
+      </select>
+
+      <button>Join</button>
+
+      <button id="leave_room" type="button">Leave</button>
+    </form>
+
+    <ul id="messages"></ul>
+
+    <form id="chat" action="">
+      <input id="m" autocomplete="off" />
+      <button>Send</button>
+    </form>
+
+    <script src="https://cdn.socket.io/4.7.4/socket.io.min.js"></script>
+    <script>
+      const form = document.querySelector("#form");
+      const leaveRoomBtn = document.querySelector("#leave_room");
+      const chatForm = document.querySelector("#chat");
+
+      const socket = io();
+
+      let roomId = "1";
+
+      form.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        const room_id = document.querySelector("#room_id").value;
+        console.log("room_id", room_id);
+
+        const resp = await socket
+          .timeout(5000)
+          .emitWithAck("join_room", room_id);
+
+        roomId = room_id;
+        console.log("join_room", resp);
+
+        initSocket(room_id);
+
+        const roomSpan = document.querySelector("span#room_detail");
+        roomSpan.textContent = room_id;
+      });
+
+      leaveRoomBtn.addEventListener("click", async (e) => {
+        e.preventDefault();
+        const room_id = document.querySelector("#room_id").value;
+        const respo = await socket
+          .timeout(5000)
+          .emitWithAck("leave_room", room_id);
+
+        roomId = "";
+        console.log("leave_room", respo);
+      });
+
+      chatForm.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        const input = document.querySelector("#m");
+        const message = input.value;
+        input.value = "";
+
+        try {
+          const reps = await socket
+            .timeout(5000)
+            .emitWithAck(`message_${roomId}`, message);
+          console.log("message", reps);
+        } catch (error) {
+          console.error(error);
+        }
+      });
+
+      if (roomId) {
+        initSocket(roomId);
+      }
+
+      function initSocket(roomId) {
+        socket.on(`message_${roomId}`, (msg, cb) => {
+          const li = document.createElement("li");
+          li.textContent = msg;
+          document.querySelector("#messages").appendChild(li);
+
+          cb({
+            status: "ok",
+            message: "Received message on room: " + roomId,
+          });
+        });
+      }
+    </script>
+  </body>
+</html>
